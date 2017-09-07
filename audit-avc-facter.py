@@ -35,11 +35,21 @@ import sepolgen.audit as audit
 logger = logging.getLogger(__name__)
 
 
+def get_audit_msgs():
+    # override audit's get_audit_msgs method because running from cron
+    # requires passing --input-logs parameter.
+    import subprocess
+    output = subprocess.Popen(["/sbin/ausearch", "--input-logs", "-m",
+                               "AVC,USER_AVC,MAC_POLICY_LOAD,DAEMON_START"],
+                              stdout=subprocess.PIPE).communicate()[0]
+    return output
+
+
 def main(factfile):
     logger.info('Parsing audit messages')
     try:
+        messages = get_audit_msgs()
         parser = audit.AuditParser(last_load_only=True)
-        messages = audit.get_audit_msgs()
         parser.parse_string(messages)
 
         avs = parser.to_access()
