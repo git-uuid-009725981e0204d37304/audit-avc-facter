@@ -39,10 +39,14 @@ def get_audit_msgs():
     # override audit's get_audit_msgs method because running from cron
     # requires passing --input-logs parameter.
     import subprocess
-    output = subprocess.Popen(["/sbin/ausearch", "--input-logs", "-m",
-                               "AVC,USER_AVC,MAC_POLICY_LOAD,DAEMON_START"],
-                              stdout=subprocess.PIPE).communicate()[0]
-    return output
+    stdout, stderr = subprocess.Popen(
+        ["/sbin/ausearch", "--input-logs", "-m", "AVC,MAC_POLICY_LOAD,DAEMON_START"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE).communicate()
+    stderr = stderr.strip()
+    if len(stderr):
+        logger.info('STDERR: %s' % stderr)
+    return stdout
 
 
 def main(factfile):
@@ -54,7 +58,7 @@ def main(factfile):
 
         avs = parser.to_access()
     except Exception as ex:
-        logger.critical('Was not able to access/parse audit messages' % ex)
+        logger.critical('Was not able to access/parse audit messages: %s' % ex)
         sys.exit(1)
 
     avslist = avs.to_list()
